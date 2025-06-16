@@ -22,7 +22,10 @@ Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Docume
 ## 🚀 Fonctionnalités
 
 ### 1. **Upload et Traitement de Documents** (`/sendFile`)
-- Accepte des fichiers images (PNG) de chèques
+- Accepte des fichiers de documents (PNG, JPG, PDF) de chèques
+- **Formats supportés :** PNG, JPG, PDF
+- **Taille maximum :** 10 MB par fichier
+- **Limite :** Aucune limite sur le nombre de fichiers (contrairement à l'interface IDP d'Anypoint Platform qui limite à 10 fichiers de 8 MB max chacun)
 - Envoie le document à l'API IDP MuleSoft pour analyse
 - Stocke temporairement le fichier sur un serveur SFTP
 - Retourne un ID d'exécution pour le suivi
@@ -41,6 +44,14 @@ Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Docume
 - **Mule Runtime 4.9.0+**
 - **Accès à MuleSoft IDP API** (token d'authentification requis)
 - **Serveur SFTP** pour le stockage des fichiers
+
+### 📄 **Exigences des Fichiers**
+
+- **Formats acceptés :** PNG, JPG, PDF
+- **Taille maximum :** 10 MB par fichier
+- **Nombre de fichiers :** Illimité via cette API
+
+> **💡 Avantage par rapport à l'interface IDP :** L'interface web d'Anypoint Platform limite à 10 fichiers maximum de 8 MB chacun, tandis que cette API permet un traitement illimité avec des fichiers jusqu'à 10 MB.
 
 ## ⚙️ Configuration
 
@@ -115,7 +126,7 @@ Content-Type: multipart/form-data
 **Body :**
 ```
 Form Data:
-- file: [fichier image du chèque - PNG]
+- file: [fichier document - PNG, JPG ou PDF - max 10 MB]
 ```
 
 **Réponse :**

@@ -22,10 +22,11 @@ Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Docume
 ## 🚀 Fonctionnalités
 
 ### 1. **Upload et Traitement de Documents** (`/sendFile`)
-- Accepte des fichiers de documents (PNG, JPG, PDF) de chèques
-- **Formats supportés :** PNG, JPG, PDF
-- **Taille maximum :** 10 MB par fichier
-- **Limite :** Aucune limite sur le nombre de fichiers (contrairement à l'interface IDP d'Anypoint Platform qui limite à 10 fichiers de 8 MB max chacun)
+- Accepte des fichiers de documents (PDF, PNG, JPG, TIFF) de chèques
+- **Formats supportés :** PDF, PNG, JPG, TIFF (150 DPI ou plus recommandé)
+- **Taille maximum :** 10 MB par fichier (via API)
+- **Pages maximum :** 50 pages par fichier
+- **Limite :** 1 fichier par requête API (upload illimité via requêtes multiples)
 - **Authentification :** Token d'accès IDP fourni en paramètre de requête
 - Envoie le document à l'API IDP MuleSoft pour analyse
 - Stocke temporairement le fichier sur un serveur SFTP
@@ -49,11 +50,18 @@ Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Docume
 
 ### 📄 **Exigences des Fichiers**
 
-- **Formats acceptés :** PNG, JPG, PDF
-- **Taille maximum :** 10 MB par fichier
-- **Nombre de fichiers :** Illimité via cette API
+- **Formats acceptés :** PDF, PNG, JPG, TIFF (150 DPI ou plus recommandé)
+- **Pages maximum :** 50 pages par fichier
+- **Taille et nombre de fichiers :**
 
-> **💡 Avantage par rapport à l'interface IDP :** L'interface web d'Anypoint Platform limite à 10 fichiers maximum de 8 MB chacun, tandis que cette API permet un traitement illimité avec des fichiers jusqu'à 10 MB.
+| **Mode d'Upload** | **Limite Fichiers** | **Taille Max** | **Pages Max** |
+|------------------|---------------------|----------------|---------------|
+| Interface Web UI | 10 fichiers par upload | 8 MB par fichier | 50 pages par fichier |
+| **API (ce projet)** | **1 fichier par requête** | **10 MB par fichier** | **50 pages par fichier** |
+
+> **💡 Avantage de l'API :** Fichiers plus volumineux (10 MB vs 8 MB) et upload illimité via requêtes multiples, contrairement à l'interface web limitée à 10 fichiers simultanés.
+
+> **⚠️ Note TIFF :** Les fichiers TIFF sont supportés pour l'extraction de données mais ne peuvent pas être prévisualisés dans l'interface MuleSoft.
 
 ## ⚙️ Configuration
 
@@ -128,7 +136,7 @@ Content-Type: multipart/form-data
 **Body :**
 ```
 Form Data:
-- file: [fichier document - PNG, JPG ou PDF - max 10 MB]
+- file: [fichier document - PDF, PNG, JPG, TIFF - max 10 MB, max 50 pages]
 ```
 
 **Exemple cURL :**
@@ -230,8 +238,8 @@ curl --location 'http://localhost:8083/execution/2f9051e5-6920-4398-a27b-ae3dc04
 2. **Extraction du token** → Récupération depuis le paramètre de requête
 3. **Appel API IDP** → Envoi du document pour analyse avec authentification
 4. **Stockage SFTP** → Sauvegarde dans le dossier "processing"
-5. **Attente de traitement** → L'IDP analyse le document (asynchrone - ~10 secondes)
-6. **Récupération des résultats** → Via l'endpoint de consultation
+5. **Attente de traitement** → L'IDP analyse le document (asynchrone - ~10 secondes, polling minimum requis)
+6. **Récupération des résultats** → Via l'endpoint de consultation (respecter l'intervalle de polling de 10 secondes)
 7. **Validation** → Vérification de la signature détectée
 8. **Classification** → Déplacement vers "valid" ou "invalid"
 
@@ -251,6 +259,9 @@ Un chèque est considéré comme **valide** si :
 
 - **Erreurs de connectivité** → Logged et propagées
 - **Token invalide/expiré** → Erreur HTTP 401/403
+- **Fichiers non conformes** → Vérifiez format (PDF/PNG/JPG/TIFF), taille (≤10 MB), pages (≤50)
+- **Rate limiting** → L'API IDP limite à 100 jobs concurrents par minute
+- **Polling trop fréquent** → Respecter l'intervalle minimum de 10 secondes entre les requêtes
 - **Chèques invalides** → Déplacés vers le dossier "invalid"
 - **Échecs de validation** → Gérés par le bloc `try/error-handler`
 
@@ -283,16 +294,41 @@ idp_poc/
 - **mule-sftp-connector** (2.4.4) - Gestion SFTP
 - **mule-validation-module** (2.0.6) - Validation des données
 
-## 🚨 Sécurité
+## 📊 Limites et Quotas MuleSoft IDP
 
-⚠️ **Important :** 
+D'après la documentation officielle MuleSoft, voici les limites importantes à connaître :
+
+### **Limitations de Fichiers**
+- **Formats acceptés :** PDF, PNG, JPG, TIFF (150 DPI minimum recommandé)
+- **Pages maximum :** 50 pages par fichier
+- **Taille maximum :** 10 MB par fichier (API) / 8 MB (Interface Web)
+
+### **Limitations de Requêtes**
+- **API :** 1 fichier par requête
+- **Interface Web :** 10 fichiers par upload simultané
+- **Jobs concurrents :** 100 maximum par minute
+- **Polling minimum :** Intervalle de 10 secondes entre les vérifications de statut
+
+### **Limitations de Prompts**
+- **Maximum :** 30 prompts par action de document
+- **Langues :** Prompts en anglais (autres langues non totalement supportées)
+- **Tokens :** 128,000 tokens maximum par requête Einstein
+
+### **Support Linguistique**
+Le support des langues varie selon le modèle LLM sélectionné. Consultez :
+- [Langues supportées par OpenAI](https://platform.openai.com/docs/supported-languages)
+- [Langues supportées par Gemini](https://ai.google.dev/gemini-api/docs/language-support)
+
+> **⚠️ Important :** Cette application respecte automatiquement les limites de polling (10 secondes) et de fichiers (1 par requête) imposées par MuleSoft IDP.
+
+## 🚨 Sécurité 
 - Les tokens d'accès sont fournis dynamiquement via les paramètres de requête
 - Ne loggez jamais les tokens dans les fichiers de log
 - Sécurisez les accès SFTP avec des credentials appropriés
 - Configurez HTTPS pour les endpoints en production
 - Utilisez HTTPS pour les appels vers l'API IDP MuleSoft
 
-## 📈 Monitoring et Logs
+⚠️ **Important :**
 
 Les logs sont configurés dans `log4j2.xml` :
 - **Fichier de log :** `logs/idp_poc.log`
@@ -300,7 +336,7 @@ Les logs sont configurés dans `log4j2.xml` :
 - **Pattern :** Inclut le correlationId pour le tracing
 - **Niveaux :** INFO pour les opérations principales, WARN pour les erreurs HTTP
 
-## 🧪 Tests avec Postman
+## 📈 Monitoring et Logs
 
 ### Collection Postman recommandée :
 
@@ -316,11 +352,13 @@ Body: file (binary)
 GET http://localhost:8083/execution/{{execution_id}}?token={{idp_token}}
 ```
 
-### Variables d'environnement Postman :
+## 🧪 Tests avec Postman
+
+> **⚠️ Respect du Polling :** Attendez au minimum 10 secondes entre les appels de vérification du statut pour respecter les limites MuleSoft IDP.
 - `idp_token` : Votre token d'accès IDP
 - `execution_id` : ID retourné par l'upload
 
-## 🤝 Contribution
+### Variables d'environnement Postman :
 
 1. Fork le projet
 2. Créez une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
@@ -328,7 +366,7 @@ GET http://localhost:8083/execution/{{execution_id}}?token={{idp_token}}
 4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
 5. Créez une Pull Request
 
-## 📄 Licence
+## 🤝 Contribution
 
 Ce projet est un POC à des fins de démonstration et d'apprentissage.
 
@@ -338,7 +376,8 @@ Pour toute question ou problème :
 - Vérifiez les logs dans `logs/idp_poc.log`
 - Consultez la documentation MuleSoft IDP
 - Vérifiez la connectivité vers l'API IDP et le serveur SFTP
-- Assurez-vous que votre token IDP est valide et non expiré
+- Vérifiez que vos fichiers respectent les limites : format (PDF/PNG/JPG/TIFF), taille (≤10 MB), pages (≤50)
+- Respectez l'intervalle de polling de 10 secondes minimum
 
 ## 🚀 Améliorations Futures
 

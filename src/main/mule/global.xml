@@ -14,7 +14,7 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 		<http:listener-connection host="0.0.0.0" port="8083" />
 	</http:listener-config>
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="f06b7045-2a95-4a88-a991-cc8ae3917c3d" basePath="/api/v1" >
-		<http:request-connection protocol="HTTPS" host="idp-rt.us-east-1.anypoint.mulesoft.com" port="443" />
+		<http:request-connection protocol="HTTPS" host="idp-rt.eu-central-1.eu1.anypoint.mulesoft.com" port="443" />
 	</http:request-config>
 	<error-handler name="globalError_Handler" doc:id="701ac272-e20b-46d8-a1de-6ef72304b187" >
 		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="6af595f3-c81a-456e-bf59-541a641e8a56" type="HTTP:CONNECTIVITY">

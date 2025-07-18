@@ -14,9 +14,9 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 		<http:listener doc:name="Listener" doc:id="d4def95b-66c7-4609-b2fc-fdfb3d90b3a9" config-ref="HTTP_Listener_config" path="/sendFile" allowedMethods="POST"/>
 		<set-variable value="#[payload]" doc:name="Set incoming" doc:id="2dbc1786-4d43-4441-970a-bb0f07a5f5ac" variableName="incoming"/>
 		<set-variable value="#[attributes.queryParams.token]" doc:name="Set Access Token" doc:id="3686e9f8-f605-4f4d-ad60-33fe072f8a9e" variableName="accessToken" />
-		<set-variable value="Image-cheque-rempli" doc:name="Set fileName" doc:id="0db44e34-5a13-4b2d-98e8-3f3a67829cca" variableName="fileName" />
-		<set-variable value="image/png" doc:name="Set fileContentType" doc:id="619ddabd-620d-4c35-a7ce-8d3f12b9d277" variableName="fileContentType" />
-		<http:request method="POST" doc:name="Execute IDP" doc:id="539c47a2-a2e2-434d-ad62-91f67fa3c88b" config-ref="HTTP_Request_configuration" path="/organizations/47d02840-e4c0-4f9d-ba31-357b8e00e857/actions/9cbacc42-a2ea-4db8-8e2b-e58f88f5a491/versions/1.0.0/executions">
+		<set-variable value='passport_Senegal' doc:name="Set fileName" doc:id="0db44e34-5a13-4b2d-98e8-3f3a67829cca" variableName="fileName" />
+		<!-- [STUDIO:"Set fileContentType"]<set-variable value="image/png" doc:name="Set fileContentType" doc:id="619ddabd-620d-4c35-a7ce-8d3f12b9d277" variableName="fileContentType" /> [STUDIO] -->
+		<http:request method="POST" doc:name="Execute IDP" doc:id="539c47a2-a2e2-434d-ad62-91f67fa3c88b" config-ref="HTTP_Request_configuration" path="/organizations/f22cd53d-c1ea-482e-a6e6-2d367ba7e48e/actions/9e816540-fbde-44ae-81ad-1d6c900c1018/versions/1.0.0/executions">
 			<http:headers><![CDATA[#[output application/java
 ---
 {
@@ -27,8 +27,8 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 		<sftp:write doc:name="write processing file" doc:id="293a5668-1dd7-4a29-939e-28ac4c31ff99" config-ref="SFTP_Config" path='#["/muletest/idp-poc/processing/" ++ vars.fileName ++ ".png"]'>
 			<sftp:content ><![CDATA[#[vars.incoming]]]></sftp:content>
 		</sftp:write>
-		<logger level="INFO" doc:name="wait 10 seconds" doc:id="7959bd1e-5565-4a3b-af44-8e1f09259b23" message="#[payload]" />
-		<ee:transform doc:name="Transform Message" doc:id="45d583ed-caea-437a-bac3-2a1bf53a011e" >
+		<logger level="INFO" doc:name="Log process" doc:id="7959bd1e-5565-4a3b-af44-8e1f09259b23" message="#[payload]" />
+		<ee:transform doc:name="wait 10s and return" doc:id="45d583ed-caea-437a-bac3-2a1bf53a011e" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 import * from dw::Runtime
@@ -48,7 +48,7 @@ output application/json
 		<http:listener doc:name="Listener" doc:id="b8130b8a-37dd-421c-b461-68800ef76437" config-ref="HTTP_Listener_config" allowedMethods="GET" path="/execution/{id}"/>
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Set executionId" doc:id="8ec0d8a1-3781-463f-9217-e581590b8c81" variableName="executionId"/>
 		<set-variable value="#[attributes.queryParams.token]" doc:name="Set Access Token" doc:id="32ae64d2-20f1-45a4-b670-a1bfa73f0256" variableName="accessToken"/>
-		<http:request method="GET" doc:name="Request" doc:id="43dde77c-3096-4693-ac79-a48858f56f1a" config-ref="HTTP_Request_configuration" path="/organizations/47d02840-e4c0-4f9d-ba31-357b8e00e857/actions/9cbacc42-a2ea-4db8-8e2b-e58f88f5a491/versions/1.0.0/executions/{executionId}">
+		<http:request method="GET" doc:name="Request" doc:id="43dde77c-3096-4693-ac79-a48858f56f1a" config-ref="HTTP_Request_configuration" path="/organizations/f22cd53d-c1ea-482e-a6e6-2d367ba7e48e/actions/9e816540-fbde-44ae-81ad-1d6c900c1018/versions/1.0.0/executions/{executionId}">
 			<http:headers ><![CDATA[#[output application/java
 ---
 {
@@ -69,31 +69,32 @@ output application/json
 					</ee:message>
 					<ee:variables >
 						<ee:set-variable variableName="datas" ><![CDATA[%dw 2.0
-output application/java
+output application/json
 ---
 {
 	"id": payload.id,
     "documentName": payload.documentName,
     "status": payload.status,
     "check_infos": {
-        "date": payload.fields.date.value as String,
-        "numeroCompte": (payload.fields.numeroCompte.value replace  " " with "") as Number,
-        "ville": payload.fields.ville.value as String,
-        "signature": payload.fields.signature.value,
-        "montant": payload.fields.montant.value as Number,
-        "numeroCheque": (payload.fields.numeroCheque.value replace  " " with "") as Number,
-        "montantLong": payload.fields.montantLong.value as String,
-        "destinataire": payload.fields.destinataire.value as String
+        "date": payload.pages[0].prompts.date.answer.value as String,
+        //"numeroCompte": (payload.fields.numeroCompte.value replace  " " with "") as Number,
+        "numero_passeport": payload.pages[0].prompts.numero_passeport.answer.value as String,
+        "nom": payload.pages[0].prompts.nom.answer.value as String,
+        "prenom": payload.pages[0].prompts.prenom.answer.value as String,
+        //"ville": payload.fields.ville.value as String,
+        //"signature": payload.fields.signature.value,
+        //"montant": payload.fields.montant.value as Number,
+        //"numeroCheque": (payload.fields.numeroCheque.value replace  " " with "") as Number,
+        //"montantLong": payload.fields.montantLong.value as String,
+        //"destinataire": payload.fields.destinataire.value as String
     }
 }]]></ee:set-variable>
 					</ee:variables>
 				</ee:transform>
-				<try doc:name="Try" doc:id="89316c74-53d8-48d1-8fa1-4ac1e860cba8" >
-					<validation:is-true doc:name="Is true" doc:id="c49bcb5d-79a1-42a1-ab3a-b0a8f1641b40" expression='#[(vars.datas.check_infos.signature == "SIGNATURE_DETECTED")]' message='#["The check " ++ vars.datas.check_infos.numeroCheque ++ " is invalid"]' />
-					<sftp:move doc:name="Move to valid folder" doc:id="68f549d4-43f5-44f1-9247-096eeb8d354d" config-ref="SFTP_Config" sourcePath='#["/muletest/idp-poc/processing/" ++ vars.fileName]' targetPath='#["/muletest/idp-poc/proceeded/valid/" ++ vars.fileName]'/>
-					<ee:transform doc:name="Result valid check" doc:id="ca0911a4-4088-4958-ab39-1efb96a2f656" >
-						<ee:message >
-							<ee:set-payload ><![CDATA[%dw 2.0
+				<sftp:move doc:name="Move to valid folder" doc:id="68f549d4-43f5-44f1-9247-096eeb8d354d" config-ref="SFTP_Config" sourcePath='#["/muletest/idp-poc/processing/" ++ vars.fileName]' targetPath='#["/muletest/idp-poc/proceeded/valid/" ++ vars.fileName]' />
+				<ee:transform doc:name="Result valid check" doc:id="ca0911a4-4088-4958-ab39-1efb96a2f656">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -101,20 +102,22 @@ output application/json
 	correlationId: correlationId,
 	timestamp: now(),
 	executionId: vars.executionId,
-	Result: "This check is valid",
+	Result: "Passport analyzis is complete",
 	datas: vars.datas
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
+				<!-- [STUDIO:"Try"]<try doc:name="Try" doc:id="89316c74-53d8-48d1-8fa1-4ac1e860cba8" >
+					<validation:is-true doc:name="Is true" doc:id="c49bcb5d-79a1-42a1-ab3a-b0a8f1641b40" expression='#[(vars.datas.check_infos.signature == "SIGNATURE_DETECTED")&#93;' message='#["The check " ++ vars.datas.check_infos.numeroCheque ++ " is invalid"&#93;' />
 					<error-handler >
 						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d49bd2dd-ffc7-4828-8a4b-f0ef88bfeb39" >
-							<logger level="INFO" doc:name="Invalid check" doc:id="c7cdd52b-7b24-4585-bd68-0532723f8a26" message='#["The check " ++ vars.datas.check_infos.numeroCheque ++ " is invalid"]'/>
-							<sftp:move doc:name="Move to invalid folder" doc:id="c2cc088e-5d19-4fac-b941-376a17adaee5" config-ref="SFTP_Config" targetPath='#["/muletest/idp-poc/proceeded/invalid/" ++ vars.fileName]' sourcePath='#["/muletest/idp-poc/processing/" ++ vars.fileName]'/>
+							<logger level="INFO" doc:name="Invalid check" doc:id="c7cdd52b-7b24-4585-bd68-0532723f8a26" message='#["The check " ++ vars.datas.check_infos.numero_passeport ++ " is invalid"&#93;'/>
+							<sftp:move doc:name="Move to invalid folder" doc:id="c2cc088e-5d19-4fac-b941-376a17adaee5" config-ref="SFTP_Config" targetPath='#["/muletest/idp-poc/proceeded/invalid/" ++ vars.fileName&#93;' sourcePath='#["/muletest/idp-poc/processing/" ++ vars.fileName&#93;'/>
 							<ee:transform doc:name="Result invalid check" doc:id="4dba093f-8dd3-46c2-bf5e-68a453ba6ce3" >
 								<ee:message >
 									<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {
 	success: true,
 	correlationId: correlationId,
@@ -122,15 +125,25 @@ output application/json
 	executionId: vars.executionId,
 	Result: "This check is invalid",
 	datas: vars.datas
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
 								</ee:message>
 							</ee:transform>
 						</on-error-continue>
 					</error-handler>
-				</try>
+				</try> [STUDIO] -->
 			</when>
 			<otherwise >
 				<logger level="INFO" doc:name="Execution is processing" doc:id="565330ad-7c32-4421-a0bc-de4569208e31" message='#["Exection " ++ vars.executionId ++ " is processing"]'/>
+				<ee:transform doc:name="Transform Message" doc:id="2243f94f-b296-4756-866d-0711b957249a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status": "in review, wait a few minutes"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
 			</otherwise>
 		</choice>
 	</flow>

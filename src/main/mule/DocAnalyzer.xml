@@ -132,11 +132,11 @@ output application/json
 					</error-handler>
 				</try> [STUDIO] -->
 			</when>
-			<otherwise >
-				<logger level="INFO" doc:name="Execution is processing" doc:id="565330ad-7c32-4421-a0bc-de4569208e31" message='#["Exection " ++ vars.executionId ++ " is processing"]'/>
-				<ee:transform doc:name="Transform Message" doc:id="2243f94f-b296-4756-866d-0711b957249a" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+			<when expression='#[payload.status == "MANUAL_VALIDATION_REQUIRED"]'>
+				<logger level="INFO" doc:name="MANUAL_VALIDATION_REQUIRED" doc:id="45832939-902e-40a8-b130-3999495302cd" message="MANUAL_VALIDATION_REQUIRED"/>
+				<ee:transform doc:name="Transform Message" doc:id="2243f94f-b296-4756-866d-0711b957249a">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -144,6 +144,9 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="default" doc:id="565330ad-7c32-4421-a0bc-de4569208e31"/>
 			</otherwise>
 		</choice>
 	</flow>

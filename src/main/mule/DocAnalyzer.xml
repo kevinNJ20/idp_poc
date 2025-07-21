@@ -14,7 +14,7 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 		<http:listener doc:name="Listener" doc:id="d4def95b-66c7-4609-b2fc-fdfb3d90b3a9" config-ref="HTTP_Listener_config" path="/sendFile" allowedMethods="POST"/>
 		<set-variable value="#[payload]" doc:name="Set incoming" doc:id="2dbc1786-4d43-4441-970a-bb0f07a5f5ac" variableName="incoming"/>
 		<set-variable value="#[attributes.queryParams.token]" doc:name="Set Access Token" doc:id="3686e9f8-f605-4f4d-ad60-33fe072f8a9e" variableName="accessToken" />
-		<set-variable value='#["passport_Senegal_"++ now()]' doc:name="Set fileName" doc:id="0db44e34-5a13-4b2d-98e8-3f3a67829cca" variableName="fileName" />
+		<set-variable value='#["CNI_"++ now()]' doc:name="Set fileName" doc:id="0db44e34-5a13-4b2d-98e8-3f3a67829cca" variableName="fileName" />
 		<!-- [STUDIO:"Set fileContentType"]<set-variable value="image/png" doc:name="Set fileContentType" doc:id="619ddabd-620d-4c35-a7ce-8d3f12b9d277" variableName="fileContentType" /> [STUDIO] -->
 		<http:request method="POST" doc:name="Execute IDP" doc:id="539c47a2-a2e2-434d-ad62-91f67fa3c88b" config-ref="HTTP_Request_configuration" path="/organizations/f22cd53d-c1ea-482e-a6e6-2d367ba7e48e/actions/861a0ead-08de-49bd-a66e-edfd93b530f9/versions/1.4.0/executions">
 			<http:headers><![CDATA[#[output application/java
@@ -24,7 +24,7 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 }]]]></http:headers>
 		</http:request>
 		<set-variable value="#[payload.id]" doc:name="Set executionID" doc:id="be8c49e2-1bcd-434c-b714-a93e04ed9af5" variableName="executionID" />
-		<sftp:write doc:name="write processing file" doc:id="293a5668-1dd7-4a29-939e-28ac4c31ff99" config-ref="SFTP_Config" path='#["/muletest/idp-poc/processing/" ++ vars.fileName ++ ".png"]'>
+		<sftp:write doc:name="write processing file" doc:id="293a5668-1dd7-4a29-939e-28ac4c31ff99" config-ref="SFTP_Config" path='#["/muletest/idp-poc/processing/" ++ vars.fileName ++ ".pdf"]'>
 			<sftp:content ><![CDATA[#[vars.incoming]]]></sftp:content>
 		</sftp:write>
 		<logger level="INFO" doc:name="Log process" doc:id="7959bd1e-5565-4a3b-af44-8e1f09259b23" message="#[payload]" />
@@ -48,7 +48,7 @@ output application/json
 	<flow name="DocAnalyzerFlow" doc:id="9bbfb6e3-bc8f-416d-a825-0431915b16e4" >
 		<http:listener doc:name="Listener" doc:id="b8130b8a-37dd-421c-b461-68800ef76437" config-ref="HTTP_Listener_config" allowedMethods="GET" path="/execution/{id}"/>
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Set executionId" doc:id="8ec0d8a1-3781-463f-9217-e581590b8c81" variableName="executionId"/>
-		<set-variable value='#[attributes.queryParams.fileName ++ ".png"]' doc:name="Set fileName" doc:id="8d8eb667-6fa3-4a54-8e2e-b00bffd8dee7" variableName="fileName"/>
+		<set-variable value='#[attributes.queryParams.fileName ++ ".pdf"]' doc:name="Set fileName" doc:id="8d8eb667-6fa3-4a54-8e2e-b00bffd8dee7" variableName="fileName"/>
 		<set-variable value="#[attributes.queryParams.token]" doc:name="Set Access Token" doc:id="32ae64d2-20f1-45a4-b670-a1bfa73f0256" variableName="accessToken"/>
 		<http:request method="GET" doc:name="Request" doc:id="43dde77c-3096-4693-ac79-a48858f56f1a" config-ref="HTTP_Request_configuration" path="/organizations/f22cd53d-c1ea-482e-a6e6-2d367ba7e48e/actions/861a0ead-08de-49bd-a66e-edfd93b530f9/versions/1.4.0/executions/{executionId}">
 			<http:headers ><![CDATA[#[output application/java

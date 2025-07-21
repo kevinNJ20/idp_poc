@@ -1,8 +1,8 @@
-# IDP POC - Document Analysis with MuleSoft IDP
+# IDP POC - Document Analysis with MuleSoft IDP (CNI)
 
 ## 🎯 Description
 
-Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Document Processing (IDP)** de MuleSoft pour analyser des documents, spécifiquement des chèques. L'application Mule 4 permet d'envoyer des images de documents à l'API IDP de MuleSoft, de traiter les résultats d'analyse, et de valider automatiquement les chèques selon des critères spécifiques.
+Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Document Processing (IDP)** de MuleSoft pour analyser des documents, spécifiquement des **Cartes Nationales d'Identité (CNI)**. L'application Mule 4 permet d'envoyer des images de CNI à l'API IDP de MuleSoft, de traiter les résultats d'analyse, et d'extraire automatiquement les informations d'identité.
 
 ## 🏗️ Architecture
 
@@ -22,7 +22,7 @@ Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Docume
 ## 🚀 Fonctionnalités
 
 ### 1. **Upload et Traitement de Documents** (`/sendFile`)
-- Accepte des fichiers de documents (PDF, PNG, JPG, TIFF) de chèques
+- Accepte des fichiers de documents CNI (PDF, PNG, JPG, TIFF)
 - **Formats supportés :** PDF, PNG, JPG, TIFF (150 DPI ou plus recommandé)
 - **Taille maximum :** 10 MB par fichier (via API)
 - **Pages maximum :** 50 pages par fichier
@@ -35,9 +35,22 @@ Ce projet est une **Proof of Concept (POC)** qui utilise l'**Intelligence Docume
 ### 2. **Récupération des Résultats** (`/execution/{id}`)
 - Vérifie le statut du traitement via l'ID d'exécution
 - **Authentification :** Token d'accès IDP fourni en paramètre de requête
-- Extrait les informations du chèque (montant, date, signature, etc.)
-- Valide automatiquement le chèque selon la présence de signature
-- Déplace les fichiers vers des dossiers "valid" ou "invalid"
+- Extrait les informations de la CNI :
+  - **NIN** (Numéro d'Identification National)
+  - **Nom** (Last_name)
+  - **Prénom** (first_name)
+  - **Date de naissance** (birthDate)
+  - **Lieu de naissance** (PlaceofBirth)
+  - **Sexe** (sex)
+  - **Taille** (Height)
+  - **Pays** (Country)
+  - **Adresse** (address)
+  - **Numéro de carte** (id_card)
+  - **Date de délivrance** (delivry_date)
+  - **Date d'expiration** (expiration_date)
+  - **Lieu d'enregistrement** (place_of_record)
+  - **Signature** (signature)
+- Déplace les fichiers vers le dossier "valid" après traitement réussi
 
 ## 📋 Prérequis
 
@@ -83,14 +96,13 @@ Créez la structure suivante sur votre serveur SFTP :
 /muletest/idp-poc/
 ├── processing/          # Fichiers en cours de traitement
 ├── proceeded/
-│   ├── valid/          # Chèques valides
-│   └── invalid/        # Chèques invalides
+│   └── valid/          # CNI traitées avec succès
 ```
 
 ### 3. **Configuration IDP**
-- **ID Organisation :** `47d02840-e4c0-4f9d-ba31-357b8e00e857`
-- **ID Action :** `9cbacc42-a2ea-4db8-8e2b-e58f88f5a491`
-- **Version :** `1.0.0`
+- **ID Organisation :** `f22cd53d-c1ea-482e-a6e6-2d367ba7e48e`
+- **ID Action :** `861a0ead-08de-49bd-a66e-edfd93b530f9`
+- **Version :** `1.5.0`
 
 > **⚠️ Sécurité :** Le token d'accès IDP est maintenant fourni dynamiquement via le paramètre de requête `token`, éliminant le besoin de le hard-coder dans l'application.
 
@@ -121,7 +133,7 @@ mvn clean package
 
 ## 📝 Utilisation
 
-### **1. Envoyer un Document pour Analyse**
+### **1. Envoyer une CNI pour Analyse**
 
 **Endpoint :** `POST http://localhost:8083/sendFile?token={IDP_TOKEN}`
 
@@ -136,13 +148,13 @@ Content-Type: multipart/form-data
 **Body :**
 ```
 Form Data:
-- file: [fichier document - PDF, PNG, JPG, TIFF - max 10 MB, max 50 pages]
+- file: [fichier CNI - PDF, PNG, JPG, TIFF - max 10 MB, max 50 pages]
 ```
 
 **Exemple cURL :**
 ```bash
 curl --location 'http://localhost:8083/sendFile?token=3380cc7c-df7c-47e1-b45c-8b5b9d136196' \
---form 'file=@"/C:/Users/kevin/Downloads/Image-cheque-rempli.png"'
+--form 'file=@"/C:/Users/kevin/Downloads/CNI-specimen.png"'
 ```
 
 **Réponse :**
@@ -151,74 +163,63 @@ curl --location 'http://localhost:8083/sendFile?token=3380cc7c-df7c-47e1-b45c-8b
     "success": true,
     "timestamp": "2025-06-16T10:30:00Z",
     "correlationId": "abc-123-def",
-    "executionID": "2f9051e5-6920-4398-a27b-ae3dc04b2d06"
+    "executionID": "2f9051e5-6920-4398-a27b-ae3dc04b2d06",
+    "fileName": "CNI_2025-06-16T10:30:00.000Z"
 }
 ```
 
 ### **2. Vérifier le Résultat du Traitement**
 
-**Endpoint :** `GET http://localhost:8083/execution/{executionID}?token={IDP_TOKEN}`
+**Endpoint :** `GET http://localhost:8083/execution/{executionID}?token={IDP_TOKEN}&fileName={fileName}`
 
 **Paramètres de requête :**
 - `token` (requis) : Token d'accès à l'API MuleSoft IDP
+- `fileName` (requis) : Nom du fichier retourné par l'endpoint `/sendFile`
 
 **Paramètres d'URL :**
 - `executionID` : ID d'exécution retourné par l'endpoint `/sendFile`
 
 **Exemple cURL :**
 ```bash
-curl --location 'http://localhost:8083/execution/2f9051e5-6920-4398-a27b-ae3dc04b2d06?token=3380cc7c-df7c-47e1-b45c-8b5b9d136196'
+curl --location 'http://localhost:8083/execution/2f9051e5-6920-4398-a27b-ae3dc04b2d06?token=3380cc7c-df7c-47e1-b45c-8b5b9d136196&fileName=CNI_2025-06-16T10:30:00.000Z'
 ```
 
-**Réponse (Chèque Valide) :**
+**Réponse (Traitement Réussi) :**
 ```json
 {
     "success": true,
     "correlationId": "abc-123-def",
     "timestamp": "2025-06-16T10:35:00Z",
     "executionId": "2f9051e5-6920-4398-a27b-ae3dc04b2d06",
-    "Result": "This check is valid",
+    "Result": "CNI analyzis is complete",
     "datas": {
         "id": "2f9051e5-6920-4398-a27b-ae3dc04b2d06",
-        "documentName": "Image-cheque-rempli.png",
+        "documentName": "CNI-specimen.png",
         "status": "SUCCEEDED",
         "check_infos": {
-            "date": "2025-06-15",
-            "numeroCompte": 1234567890,
-            "ville": "Paris",
+            "NIN": "123456789012",
+            "sex": "M",
+            "Height": "1.75",
+            "Country": "FRANCE",
+            "address": "123 RUE DE LA RÉPUBLIQUE 75001 PARIS",
+            "id_card": "ABC123456789",
             "signature": "SIGNATURE_DETECTED",
-            "montant": 150.50,
-            "numeroCheque": 1001,
-            "montantLong": "Cent cinquante euros et cinquante centimes",
-            "destinataire": "Jean Dupont"
+            "PlaceofBirth": "PARIS",
+            "delivry_date": "2020-01-15",
+            "expiration_date": "2030-01-15",
+            "place_of_record": "PRÉFECTURE DE PARIS",
+            "birthDate": "1990-05-15",
+            "Last_name": "DUPONT",
+            "first_name": "Jean"
         }
     }
 }
 ```
 
-**Réponse (Chèque Invalide) :**
+**Réponse (Validation Manuelle Requise) :**
 ```json
 {
-    "success": true,
-    "correlationId": "def-456-ghi",
-    "timestamp": "2025-06-16T10:35:00Z",
-    "executionId": "2f9051e5-6920-4398-a27b-ae3dc04b2d06",
-    "Result": "This check is invalid",
-    "datas": {
-        "id": "2f9051e5-6920-4398-a27b-ae3dc04b2d06",
-        "documentName": "Image-cheque-rempli.png",
-        "status": "SUCCEEDED",
-        "check_infos": {
-            "date": "2025-06-15",
-            "numeroCompte": 1234567890,
-            "ville": "Paris",
-            "signature": "NO_SIGNATURE_DETECTED",
-            "montant": 150.50,
-            "numeroCheque": 1001,
-            "montantLong": "Cent cinquante euros et cinquante centimes",
-            "destinataire": "Jean Dupont"
-        }
-    }
+    "status": "in review, wait a few minutes"
 }
 ```
 
@@ -240,14 +241,18 @@ curl --location 'http://localhost:8083/execution/2f9051e5-6920-4398-a27b-ae3dc04
 4. **Stockage SFTP** → Sauvegarde dans le dossier "processing"
 5. **Attente de traitement** → L'IDP analyse le document (asynchrone - ~10 secondes, polling minimum requis)
 6. **Récupération des résultats** → Via l'endpoint de consultation (respecter l'intervalle de polling de 10 secondes)
-7. **Validation** → Vérification de la signature détectée
-8. **Classification** → Déplacement vers "valid" ou "invalid"
+7. **Extraction des données** → Récupération de toutes les informations de la CNI
+8. **Archivage** → Déplacement vers le dossier "valid"
 
-### **Critères de Validation**
+### **Informations Extraites**
 
-Un chèque est considéré comme **valide** si :
-- Le traitement IDP s'est terminé avec succès (`status: "SUCCEEDED"`)
-- Une signature a été détectée (`signature: "SIGNATURE_DETECTED"`)
+L'application extrait automatiquement les informations suivantes de la CNI :
+- **Identification** : NIN, numéro de carte d'identité
+- **État civil** : Nom, prénom, date et lieu de naissance, sexe
+- **Caractéristiques physiques** : Taille
+- **Localisation** : Pays, adresse
+- **Validité** : Date de délivrance, date d'expiration
+- **Administratif** : Lieu d'enregistrement, présence de signature
 
 ### **Gestion de l'Authentification**
 
@@ -262,8 +267,8 @@ Un chèque est considéré comme **valide** si :
 - **Fichiers non conformes** → Vérifiez format (PDF/PNG/JPG/TIFF), taille (≤10 MB), pages (≤50)
 - **Rate limiting** → L'API IDP limite à 100 jobs concurrents par minute
 - **Polling trop fréquent** → Respecter l'intervalle minimum de 10 secondes entre les requêtes
-- **Chèques invalides** → Déplacés vers le dossier "invalid"
-- **Échecs de validation** → Gérés par le bloc `try/error-handler`
+- **Validation manuelle requise** → Status spécifique retourné par l'API
+- **Échecs de traitement** → Gérés par le bloc `try/error-handler`
 
 ## 📁 Structure du Projet
 
@@ -340,7 +345,7 @@ Les logs sont configurés dans `log4j2.xml` :
 
 ### Collection Postman recommandée :
 
-**1. Upload Document**
+**1. Upload CNI**
 ```
 POST http://localhost:8083/sendFile?token={{idp_token}}
 Content-Type: multipart/form-data
@@ -349,26 +354,25 @@ Body: file (binary)
 
 **2. Check Execution Status**
 ```
-GET http://localhost:8083/execution/{{execution_id}}?token={{idp_token}}
+GET http://localhost:8083/execution/{{execution_id}}?token={{idp_token}}&fileName={{file_name}}
 ```
 
 ## 🧪 Tests avec Postman
 
 > **⚠️ Respect du Polling :** Attendez au minimum 10 secondes entre les appels de vérification du statut pour respecter les limites MuleSoft IDP.
-- `idp_token` : Votre token d'accès IDP
-- `execution_id` : ID retourné par l'upload
 
 ### Variables d'environnement Postman :
+- `idp_token` : Votre token d'accès IDP
+- `execution_id` : ID retourné par l'upload
+- `file_name` : Nom du fichier retourné par l'upload
+
+## 🤝 Contribution
 
 1. Fork le projet
 2. Créez une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
 3. Commitez vos changements (`git commit -am 'Ajoute nouvelle fonctionnalité'`)
 4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
 5. Créez une Pull Request
-
-## 🤝 Contribution
-
-Ce projet est un POC à des fins de démonstration et d'apprentissage.
 
 ## 📞 Support
 
@@ -386,6 +390,8 @@ Pour toute question ou problème :
 - Interface web pour faciliter les tests
 - Intégration avec des bases de données pour l'historique
 - Notifications en temps réel pour les résultats de traitement
+- Extraction et validation de documents d'identité supplémentaires (passeports, permis de conduire)
+- Détection automatique de fraudes documentaires
 
 ---
 
